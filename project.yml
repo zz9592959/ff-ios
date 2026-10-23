@@ -1,0 +1,39 @@
+
+name: FaceFusionLocal
+
+options:
+  bundleIdPrefix: com.localai
+  deploymentTarget:
+    iOS: "16.0"
+
+packages:
+  ONNXRuntime:
+    url: https://github.com/microsoft/onnxruntime-swift-package-manager
+    from: 1.24.2
+
+targets:
+  FaceFusionLocal:
+    type: application
+    platform: iOS
+
+    sources:
+      - App
+
+    dependencies:
+      - package: ONNXRuntime
+        product: onnxruntime
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.localai.facefusionlocal
+        PRODUCT_NAME: FaceFusionLocal
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: "FaceFusion Local"
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "يُستخدم الإذن لحفظ الصور الناتجة في مكتبة الصور."
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIUserInterfaceStyle: Automatic
