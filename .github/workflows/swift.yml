@@ -1,0 +1,63 @@
+name: Build unsigned iOS IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Verify Xcode
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project from project.yml
+        run: xcodegen generate --spec project.yml
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -project FaceFusionLocal.xcodeproj -scheme FaceFusionLocal
+
+      - name: Build iOS app without code signing
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project FaceFusionLocal.xcodeproj \
+            -scheme FaceFusionLocal \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$GITHUB_WORKSPACE/build/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="$GITHUB_WORKSPACE/build/DerivedData/Build/Products/Release-iphoneos/FaceFusionLocal.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Build succeeded without the expected .app path. Searching build output:"
+            find "$GITHUB_WORKSPACE/build/DerivedData" -name 'FaceFusionLocal.app' -print
+            exit 1
+          fi
+          mkdir -p "$GITHUB_WORKSPACE/build/ipa/Payload"
+          ditto "$APP_PATH" "$GITHUB_WORKSPACE/build/ipa/Payload/FaceFusionLocal.app"
+          (cd "$GITHUB_WORKSPACE/build/ipa" && /usr/bin/zip -qry "$GITHUB_WORKSPACE/FaceFusionLocal-unsigned.ipa" Payload)
+          test -s "$GITHUB_WORKSPACE/FaceFusionLocal-unsigned.ipa"
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: FaceFusionLocal-unsigned-IPA
+          path: FaceFusionLocal-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
